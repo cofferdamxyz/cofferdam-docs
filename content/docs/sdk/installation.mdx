@@ -1,0 +1,53 @@
+---
+title: Installation
+description: Install @cofferdam/sdk and its React bindings from the release branches.
+prompt: Then add the Cofferdam SDK to my project exactly as the page describes, using the package manager my project already uses. Tell me which entry points I will need for what I am building, and ask if that is not clear.
+---
+
+The SDK is two packages:
+
+| Package | What it is |
+|---|---|
+| `@cofferdam/sdk` | The framework-agnostic core: sign-in, providers, session attestations. |
+| `@cofferdam/sdk-react` | React bindings: a provider, hooks and a sign-in button. |
+
+## Install
+
+The packages are not on npm yet. Each push to the SDK's `main` branch publishes a built package to a release branch, which you install from GitHub:
+
+```json title="package.json"
+{
+  "dependencies": {
+    "@cofferdam/sdk": "github:cofferdamxyz/cofferdam-sdk#release-core-main",
+    "@cofferdam/sdk-react": "github:cofferdamxyz/cofferdam-sdk#release-react-main",
+    "ethers": "^6.13.0"
+  }
+}
+```
+
+Then run your package manager's install.
+
+- List both packages when you use React. `@cofferdam/sdk-react` takes `@cofferdam/sdk` as a peer dependency.
+- A release branch holds one commit, replaced on every publish. To get a new snapshot, reinstall (`yarn install --force`).
+- There is no fixed version to pin until the packages are on npm: a replaced commit is discarded, so an install pinned to it can stop resolving. If you need a fixed copy, keep the built package in your own repository.
+
+## Requirements
+
+- **Node 20 or later**, a browser, or React Native. Hashing uses `@noble/hashes`, so the SDK does not need WebCrypto.
+- **`ethers` version 6** is an optional peer dependency. Every entry point needs it except `@cofferdam/sdk/mock`.
+- The packages are ES modules with TypeScript types included.
+
+## Entry points
+
+| Import | Contents | Needs `ethers` |
+|---|---|---|
+| `@cofferdam/sdk` | Everything: the `Cofferdam` class, the providers, session attestations | yes |
+| `@cofferdam/sdk/mock` | `MockProvider`, `mockProfiles`, `SignInRejected` | no |
+| `@cofferdam/sdk/native` | `NativeAccountProvider`, the passkey account client Cofferdam's own app runs on | yes |
+| `@cofferdam/sdk/local` | `LocalChainProvider`, plain accounts on a local or test chain | yes |
+| `@cofferdam/sdk/escrow` | `CofferdamSpotEscrowClient` and its ABI | yes |
+| `@cofferdam/sdk-react` | `CofferdamProvider`, `useSignInWithCofferdam`, `useCofferdam`, `SignInWithCofferdamButton` | through the core |
+
+## Next
+
+Make your first call in the [quick start](/docs/sdk/quickstart).

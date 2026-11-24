@@ -1,0 +1,50 @@
+---
+title: Introduction
+description: What you can build on Cofferdam today, and where to start.
+prompt: Then tell me, in a few lines, what I can build on Cofferdam today and which page to read first for my project. Ask me what I am building if it is not clear.
+---
+
+Cofferdam gives people one account for work: they sign in with a passkey, prove who they are once, and get paid through escrow on [Base](https://base.org). These docs are for developers who want their own app to use that account.
+
+<Callout type="warn" title="Pre-release">
+  The SDK is version 0.0.0 and runs against the Base Sepolia test network. Its API changes without notice until the first published version. Each page says what is built and what is not.
+</Callout>
+
+## Why build on Cofferdam
+
+- **No personal data to hold.** Your app gets a pseudonym, whether the account is verified, and a token to check. It never receives a name, an email, a passport or a phone number, so there is none of it for you to store, secure or lose. The session also carries the account address, which you should not store. See [What your app receives](#what-your-app-receives).
+- **Passkeys, not passwords.** People sign in with a passkey. There is no password for you to store, reset or leak.
+- **No passport to handle.** `verified` says whether the account was bound to a verified passport when the user signed in, and the passport never reaches you. Treat it as a hint: see [Verify a session](/docs/sdk/verify-session).
+- **One call on your server.** A sign-in carries a `csa1:` session attestation signed by the user's passkey. Your server checks its signature with one function, or checks the signature and that the key controls the account with one HTTP request.
+- **Build before launch.** A mock provider with named test users runs with no network and no account, and React bindings give you a provider, two hooks and a button.
+- **Open source.** The SDK is MIT-licensed and framework-agnostic.
+
+## What you can do today
+
+- **Build "Sign in with Cofferdam" against a mock.** `@cofferdam/sdk` ships a mock provider with named test users, so you can build and test your sign-in flow, your policies and your UI with no network and no account. Start with the [quick start](/docs/sdk/quickstart).
+- **Verify a session on your server.** A sign-in returns a `csa1:` session attestation signed by the user's passkey. Your server checks it with one function call, or with one HTTP request. See [Verify a session](/docs/sdk/verify-session).
+- **Use the React bindings.** A provider, two hooks and a ready button. See [React](/docs/sdk/react).
+
+## What is not available yet
+
+- **Signing in real users from your own app.** Today a real passkey sign-in runs on Cofferdam's own surfaces only: passkeys are bound to the `cofferdam.xyz` domain. Accounts that start from a partner app's own passkey are planned.
+- **npm packages.** The SDK installs from release branches on GitHub. See [Installation](/docs/sdk/installation).
+- **Paying a user by handle** from an integrator's app is planned.
+
+## What your app receives
+
+Your app never receives a name, an email, a passport or a phone number. A sign-in gives it:
+
+| Field | What it is |
+|---|---|
+| `appPseudonym` | An identifier for this user in your app. Another app gets a different one for the same person. |
+| `verified` | Whether the account was bound to a verified passport when the user signed in. |
+| `attestation` | A `csa1:` token your server verifies. It proves the user's passkey signed this session for your app. |
+
+The response also carries `accountAddress`. Treat it as a value for the current session and do not store it: account addresses change between contract generations, and this field is expected to leave the response.
+
+Today the pseudonym is derived from the account address. It changes if the account moves to a new contract generation, and it is not yet a privacy boundary between apps that both hold the address. A pseudonym that stays the same across generations is planned.
+
+## Source
+
+The SDK is open source under the MIT licence: [cofferdamxyz/cofferdam-sdk](https://github.com/cofferdamxyz/cofferdam-sdk).

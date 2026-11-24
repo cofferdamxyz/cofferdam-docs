@@ -1,0 +1,28 @@
+name: CI
+
+# Checks on every push to main and on every pull request. CI never deploys and
+# holds no Cloudflare token: the server is deployed by Cofferdam's maintainers.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mcp:
+    name: mcp
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: mcp/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn test

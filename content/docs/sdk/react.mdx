@@ -1,0 +1,90 @@
+---
+title: React
+description: The provider, the hooks and the sign-in button of @cofferdam/sdk-react.
+prompt: Then add Sign in with Cofferdam to my React app following the page - the provider at the root (in a client component if my framework has server components), the button where users sign in, on the mock network. Ask me for my app's scope id and where the button belongs.
+---
+
+`@cofferdam/sdk-react` wraps the core SDK for React 18 and 19. Install both packages and `ethers` as in [Installation](/docs/sdk/installation).
+
+## Provider
+
+Wrap your app, or the part of it that signs users in, in `CofferdamProvider`. It builds one `Cofferdam` instance and holds the session.
+
+```tsx title="app.tsx"
+import { CofferdamProvider } from '@cofferdam/sdk-react'
+
+const config = {
+  scope: 'my-app',
+  scopeDisplayName: 'My App',
+  network: 'mock',
+} as const
+
+export function App({ children }: { children: React.ReactNode }) {
+  return <CofferdamProvider config={config}>{children}</CofferdamProvider>
+}
+```
+
+Keep `config` stable between renders (a module constant or `useMemo`). The provider rebuilds its `Cofferdam` instance when `scope`, `network` or `provider` changes.
+
+The package does not mark its components as client components. In a framework with React Server Components, such as the Next.js App Router, put the provider, the button and anything that calls the hooks in a file that starts with `'use client'`.
+
+## Sign-in button
+
+`SignInWithCofferdamButton` runs the sign-in and shows a pending state. It styles itself and needs no stylesheet.
+
+```tsx title="sign-in.tsx"
+import { SignInWithCofferdamButton } from '@cofferdam/sdk-react'
+
+export function SignIn() {
+  return (
+    <SignInWithCofferdamButton
+      onSignedIn={(session) => {
+        // send session.attestation to your server
+      }}
+    />
+  )
+}
+```
+
+| Prop | What it does |
+|---|---|
+| `policy` | A `SignInPolicy` for this sign-in. |
+| `onSignedIn` | Called with the session after a sign-in. |
+| `children` | The label, in place of the default. |
+| `leadingIcon`, `fullWidth`, `disabled`, `className`, `style` | Presentation. |
+| `nonce` | For a Content Security Policy that requires one on `<style>` elements. |
+
+To show a failed sign-in, read `error` from `useSignInWithCofferdam()`, below.
+
+The button follows your page's theme through three CSS variables: `--cofferdam-button-bg`, `--cofferdam-button-fg` and the optional `--cofferdam-button-border`.
+
+## Hooks
+
+Build your own UI with `useSignInWithCofferdam`:
+
+```tsx title="custom-sign-in.tsx"
+import { useSignInWithCofferdam } from '@cofferdam/sdk-react'
+
+export function CustomSignIn() {
+  const { signIn, signOut, session, isPending, error } = useSignInWithCofferdam()
+
+  if (session) {
+    return <button onClick={signOut}>Sign out {session.appPseudonym}</button>
+  }
+
+  return (
+    <>
+      <button onClick={() => signIn()} disabled={isPending}>
+        Sign in with Cofferdam
+      </button>
+      {error ? <p role="alert">{error.message}</p> : null}
+    </>
+  )
+}
+```
+
+`signIn(policy?)` resolves to the session, or to `null` when the sign-in fails; the failure is in `error`. `useCofferdam()` returns `{ cofferdam, session, signOut }` when you need the `Cofferdam` instance itself.
+
+## Next
+
+Send `session.attestation` to your server and [verify it](/docs/sdk/verify-session).

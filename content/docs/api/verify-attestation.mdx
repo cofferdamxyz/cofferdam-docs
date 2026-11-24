@@ -1,0 +1,97 @@
+---
+title: Verify attestation
+description: POST /v1/session/verify-attestation checks a csa1 token and, on request, that its key controls the account.
+prompt: Then add a call to this route from my backend to verify a Cofferdam session attestation, with checkOnChain set to true, and handle every error code the page lists. Use my server's language and HTTP client.
+---
+
+Verifies a `csa1:` session attestation over HTTP. Use it from a server that is not written in JavaScript, or when you want Cofferdam to confirm on-chain that the signing key controls the account.
+
+```http
+POST https://cofferdam.xyz/v1/session/verify-attestation
+Content-Type: application/json
+```
+
+No authentication. Call it from your server: the API does not answer cross-origin requests from other sites' pages.
+
+## Request
+
+```json
+{
+  "attestation": "csa1:eyJ2IjoxLCJhbGciOi…",
+  "expect": { "scope": "my-app", "chainId": 84532 },
+  "maxAgeMs": 300000,
+  "checkOnChain": true
+}
+```
+
+| Field | Type | |
+|---|---|---|
+| `attestation` | string | Required. The `csa1:` token from the sign-in. |
+| `expect` | object | Optional. Values the token must carry: `scope`, `appPseudonym`, `accountAddress`, `chainId`. |
+| `maxAgeMs` | number | Optional. Refuse a token issued longer ago than this. |
+| `checkOnChain` | boolean | Optional. Also check that the token's key is an active authority on the account. |
+
+Send `expect.scope` and `maxAgeMs` on every call, for the reasons in [Verify a session](/docs/sdk/verify-session).
+
+## Response
+
+`200` when the signature and every check you asked for pass:
+
+```json
+{
+  "ok": true,
+  "claims": {
+    "scope": "my-app",
+    "appPseudonym": "cd_pseudo_example",
+    "accountAddress": "0x1111111111111111111111111111111111111111",
+    "chainId": 84532,
+    "verified": false,
+    "issuedAt": 1795470478309,
+    "alg": "p256",
+    "publicKey": { "qx": "0x62df…619d", "qy": "0xd4be…81c9" }
+  },
+  "authority": { "status": "account_not_deployed" }
+}
+```
+
+The route also accepts a version 2 token whose audience is Cofferdam's own API (`cofferdam-plane`); its `claims` then carry `tier`, `expiresAt`, `aud` and `jkt`. It checks the token only, never a per-request device proof. A version 2 token issued for your own audience is refused here with `verification_failed`: verify it with the SDK.
+
+`authority` is present when you sent `checkOnChain: true`. A `200` with `ok: true` means the signature is valid; read `authority.status` to know whether the key controls the account:
+
+| `status` | Meaning |
+|---|---|
+| `active` | The key is an active authority on the account. The object also carries `authorityId`, `module` and `tier`. |
+| `not_found` | The account exists and this key is not an authority on it. Refuse the session. |
+| `account_not_deployed` | The account has made no transaction yet, so there is nothing to read. Expected for a new user; the token itself is still valid. |
+| `chain_unsupported` | The token names a chain the API does not read. The object carries `chainId`. |
+| `check_failed` | The chain could not be read. Try again. The object carries `message`. |
+
+## Errors
+
+Every error is `400` with `ok: false`, an `error` code and, for the last three, a `message`:
+
+| `error` | When |
+|---|---|
+| `invalid_json` | The body is not JSON. |
+| `bad_attestation` | `attestation` is missing or not a string. |
+| `malformed_attestation` | The string is not a well-formed `csa1:` token. |
+| `attestation_expired` | The token is older than `maxAgeMs`, or a version 2 token has expired. |
+| `verification_failed` | A field does not match `expect`, the signature is invalid, or a version 2 token's audience is not Cofferdam's API. |
+
+```json
+{
+  "ok": false,
+  "error": "verification_failed",
+  "message": "session attestation scope mismatch (expected other, got my-app)."
+}
+```
+
+## Example
+
+```bash
+curl -X POST https://cofferdam.xyz/v1/session/verify-attestation \
+  -H 'Content-Type: application/json' \
+  -d '{"attestation":"csa1:…","expect":{"scope":"my-app"},"maxAgeMs":300000,"checkOnChain":true}'
+```
+
+To get a token to try it with, sign one with the test signer in [Verify a session](/docs/sdk/verify-session#test-it-without-a-passkey).

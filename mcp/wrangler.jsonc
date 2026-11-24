@@ -1,0 +1,32 @@
+{
+  // The Cofferdam docs MCP server: a public, read-only Worker at
+  // docs.cofferdam.xyz/mcp that answers from the published developer docs.
+  // No account_id, no secrets, and one binding, the rate limit: nothing that
+  // stores or reaches user data. The protocol is Cloudflare's createMcpHandler
+  // over the MCP SDK; its packages are in this folder's package.json. Deploys
+  // are made by Cofferdam's maintainers, never by CI.
+  "name": "cofferdam-docs-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-30",
+  // The MCP handler keeps a request's context with Node's AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  // A custom domain on the cofferdam.xyz zone (creates the DNS record and the
+  // certificate). POST /mcp is the server; any other GET goes to the docs.
+  "routes": [{ "pattern": "docs.cofferdam.xyz", "custom_domain": true }],
+  // Per client address. Generous, because an AI provider's connector calls
+  // from servers many people share.
+  "ratelimits": [
+    { "name": "DOCS_MCP_RL", "namespace_id": "1301", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "vars": {
+    "DOCS_ORIGIN": "https://cofferdam.xyz",
+    // The Host values answered, beside localhost; a browser may also call from the site.
+    "MCP_HOSTNAMES": "docs.cofferdam.xyz"
+  },
+  // A query is whatever an agent's user typed. Nothing of a request is logged.
+  "observability": {
+    "enabled": false
+  }
+}

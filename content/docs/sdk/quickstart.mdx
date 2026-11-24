@@ -1,0 +1,104 @@
+---
+title: Quick start
+description: Sign a test user in with the mock provider. No network, no account, no keys.
+prompt: Then add a mock "Sign in with Cofferdam" to my project following the page - install the SDK from the release branch, sign a mock user in, and show me the response. Use the framework my project already uses, and ask me for my app's scope id.
+---
+
+The mock provider signs a test user in entirely in your process. Use it to build your sign-in flow, your policy checks and your UI before any real account is involved.
+
+## Sign a mock user in
+
+```ts title="sign-in.ts"
+import { MockProvider, mockProfiles } from '@cofferdam/sdk/mock'
+
+const provider = new MockProvider({
+  scope: 'my-app', // your app's identifier
+  ...mockProfiles['verified-br'],
+})
+
+const session = await provider.signIn({})
+
+console.log(session.appPseudonym) // cd_pseudo_…
+console.log(session.verified) // true
+console.log(session.verifiedClaims) // { country: 'BR', olderThan: 18, ofacClear: true, proofTimestamp: … }
+```
+
+`@cofferdam/sdk/mock` does not load `ethers`, so this runs with the core package alone.
+
+`scope` identifies your app. The pseudonym is derived per scope, so the same user gets a different `appPseudonym` in another app.
+
+## The response
+
+`signIn` resolves to a `SignInResponse`:
+
+| Field | With the mock provider |
+|---|---|
+| `appPseudonym` | `cd_pseudo_` and 24 hex characters. Stable for a given profile and scope. |
+| `verified` | The profile's value. |
+| `verifiedClaims` | The profile's claims when `verified` is true, otherwise `null`. |
+| `attestation` | The placeholder `mock-attestation-v1`. It does not verify; see [Verify a session](/docs/sdk/verify-session) for real tokens. |
+| `sessionToken` | An unsigned, informational token. Never trust it on a server. |
+| `scopeKey` | A per-user, per-scope value. It is not a secret; do not encrypt under it. |
+| `accountAddress` | A deterministic fake address. Do not store account addresses. |
+
+## Test users
+
+`mockProfiles` has five named users. Each has a fixed id, so its pseudonym is the same on every run.
+
+| Profile | Use it to test |
+|---|---|
+| `verified-br` | The usual case: a verified user in Brazil, 18 or older. |
+| `verified-us` | Country rules: a verified user in the United States, 21 or older. |
+| `unverified` | A user who has not verified a passport. |
+| `ofac-flagged` | A verified user whose sanctions check is not clear. |
+| `stale-proof` | A verification that is too old for `requireVerifiedWithin`. |
+
+## Policies
+
+Pass a policy to `signIn` to say who may sign in. A sign-in the policy refuses throws `SignInRejected` with a `code`.
+
+```ts title="policy.ts"
+import { MockProvider, SignInRejected, mockProfiles } from '@cofferdam/sdk/mock'
+
+const provider = new MockProvider({ scope: 'my-app', ...mockProfiles['verified-us'] })
+
+try {
+  await provider.signIn({ blockedCountries: ['US'] })
+} catch (err) {
+  if (err instanceof SignInRejected) {
+    console.log(err.code) // 'country_blocked'
+  }
+}
+```
+
+The mock provider enforces `allowedCountries`, `blockedCountries` and `enforceSelfBeforeAccount` (refuse an unverified user, code `self_verification_failed`). The codes are `cancelled`, `no_passkey`, `self_verification_failed`, `country_blocked` and `unknown`.
+
+<Callout type="info" title="Country and claim policies on real accounts">
+  Real sign-ins do not return `verifiedClaims` yet, so a country or claim policy refuses every real sign-in today. Build these rules against the mock profiles; they will apply to real accounts once claims are issued.
+</Callout>
+
+## The `Cofferdam` class
+
+`Cofferdam` wraps a provider, merges a default policy with a per-call one, and keeps the session in memory. With `network: 'mock'` it builds a `MockProvider` for you. It is exported from the package root, which needs `ethers` installed.
+
+```ts title="cofferdam.ts"
+import { Cofferdam } from '@cofferdam/sdk'
+
+const cofferdam = new Cofferdam({
+  scope: 'my-app',
+  scopeDisplayName: 'My App',
+  network: 'mock',
+  policy: { blockedCountries: ['KP'] },
+})
+
+const session = await cofferdam.signIn()
+cofferdam.getSession() // the same session, until signOut()
+cofferdam.signOut()
+```
+
+To choose a test user, pass a provider: `provider: new MockProvider({ scope: 'my-app', ...mockProfiles['unverified'] })`.
+
+## Next
+
+- Add the sign-in button to a [React](/docs/sdk/react) app.
+- [Verify a session](/docs/sdk/verify-session) on your server.

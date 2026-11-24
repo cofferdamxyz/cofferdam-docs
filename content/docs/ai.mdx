@@ -1,0 +1,54 @@
+---
+title: Use with AI
+description: Give your coding agent these docs as Markdown, as one index, or as a ready prompt.
+prompt: Then tell me how you will read the Cofferdam docs from now on in this project (the index, the Markdown pages), and fetch the index now so you know what exists.
+---
+
+These docs are written to be read by coding agents as well as by people. Every page is available as plain Markdown, and every page has a prompt you can paste into your own AI.
+
+## Copy prompt
+
+Each page has a **Copy prompt** button under its title. It copies a short prompt that tells your agent to read that page as Markdown, where the index of all pages is, and what to do: for example, add the SDK to your project, or write the server-side check. Paste it into Claude, ChatGPT, Cursor or any agent that can fetch a URL. Hover the button to read the prompt before you copy it.
+
+**Copy Markdown** copies the page itself, for agents that cannot browse. **Open** sends the page to an AI chat in a new tab.
+
+## Markdown for every page
+
+Add `.md` to any page's address:
+
+```text
+https://cofferdam.xyz/docs/sdk/quickstart.md
+```
+
+## One index: llms.txt
+
+```text
+https://cofferdam.xyz/llms.txt
+```
+
+`llms.txt` lists every page with its Markdown address and a one-line description. Point an agent at it first and let it pick the pages it needs. `llms-full.txt` at the same place has every documentation page in one file.
+
+## Skill
+
+A skill is a short file of rules an agent loads when a task matches it. The `cofferdam-sdk` skill tells an agent how to install the SDK, to start on the mock provider, to verify sessions on the server, and what is not available yet.
+
+```text
+https://cofferdam.xyz/.well-known/agent-skills/cofferdam-sdk/SKILL.md
+```
+
+Install it with the `skills` installer, which reads the site's skill index:
+
+```bash
+npx skills add https://cofferdam.xyz
+```
+
+Or save the file above where your agent keeps its skills.
+
+## Tell your agent once
+
+To have an agent use these docs in every session, add a line to its project instructions (`CLAUDE.md`, `AGENTS.md`, Cursor rules):
+
+```text
+For anything about Cofferdam, read https://cofferdam.xyz/llms.txt first and fetch the
+Markdown pages it lists. The SDK is pre-release: prefer the docs over what you remember.
+```

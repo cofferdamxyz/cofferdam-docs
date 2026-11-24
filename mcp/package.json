@@ -1,0 +1,25 @@
+{
+  "name": "cofferdam-docs-mcp",
+  "version": "0.2.0",
+  "description": "The Cofferdam docs MCP server: a public, read-only Worker that answers from the published developer docs.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "tsc -p . && node --test test/*.test.ts",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.4.0",
+    "agents": "0.33.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.41",
+    "typescript": "5.9.3",
+    "wrangler": "4.156.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "private": true
+}

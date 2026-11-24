@@ -1,0 +1,4 @@
+{
+  "title": "Documentation",
+  "pages": ["index", "ai", "---SDK---", "sdk/installation", "sdk/quickstart", "sdk/react", "sdk/verify-session", "---API---", "api/verify-attestation"]
+}

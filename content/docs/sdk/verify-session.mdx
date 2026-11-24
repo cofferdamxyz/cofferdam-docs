@@ -1,0 +1,87 @@
+---
+title: Verify a session
+description: Check a csa1 session attestation on your server, and know what it proves.
+prompt: Then add server-side verification of the Cofferdam session attestation to my backend following the page, including a test that signs a token with the test signer. Use my server's language and framework; if it is not JavaScript or TypeScript, use the HTTP route instead of the SDK function.
+---
+
+A sign-in returns `attestation`, a `csa1:` token: the user's passkey signing the session for your app. Your client sends it to your server, and your server verifies it before it trusts anything about the session.
+
+## Verify with the SDK
+
+```ts title="server.ts"
+import { decodeAndVerifySessionAttestation } from '@cofferdam/sdk'
+
+const att = decodeAndVerifySessionAttestation(token, {
+  expect: { scope: 'my-app', chainId: 84532 },
+  maxAgeMs: 5 * 60_000,
+})
+
+// att.appPseudonym is now safe to use as this user's id in your app
+```
+
+The function is synchronous and makes no network call. It throws one of three errors, all subclasses of `SessionAttestationError`:
+
+| Error | When |
+|---|---|
+| `SessionAttestationDecodeError` | The string is not a `csa1:` token, or its payload is malformed. |
+| `SessionAttestationExpiredError` | The token is older than `maxAgeMs`, or issued more than a minute in the future. |
+| `SessionAttestationVerificationError` | A field does not match `expect`, or the signature is not the presented key's. |
+
+Always pass `expect.scope` and `maxAgeMs`. A version 1 token has no audience and no expiry of its own, so these two options are what stop a token issued for another app, or an old one, from being replayed to you. `expect` can also pin `appPseudonym`, `accountAddress` and `chainId` (84532 is Base Sepolia).
+
+## What the token contains
+
+| Field | What it is |
+|---|---|
+| `scope` | The app the session was issued for. |
+| `appPseudonym` | The user's identifier in that app. |
+| `accountAddress` | The user's account. Do not store it. |
+| `chainId` | The chain the account is on. |
+| `verified` | Whether the account was bound to a verified passport at sign-in. |
+| `issuedAt` | When the passkey signed, in Unix milliseconds. |
+| `publicKey`, `alg`, `sig` | The passkey's public key, the signature scheme (`webauthn` or `p256`) and the signature. |
+
+## What a valid token proves
+
+A valid token proves that the holder of `publicKey` signed exactly these fields. It does not prove two things:
+
+- **That the key controls the account.** Anyone can generate a key and sign a token that names someone else's `accountAddress`. To rely on the account, confirm that the key is an active authority on it. The [verify-attestation route](/docs/api/verify-attestation) does this for you with `checkOnChain: true`.
+- **That the user is verified.** `verified` is the value the signing client read at sign-in. Treat it as a hint, not as proof of identity.
+
+A session token never moves money by itself. Sending money to an address always takes a passkey confirmation from the user, on a Cofferdam surface.
+
+## Test it without a passkey
+
+The SDK includes a software signer for tests. It produces real `csa1:` tokens that verify, from a key derived from a fixed string:
+
+```ts title="verify.test.ts"
+import {
+  DeterministicPasskeySigner,
+  decodeAndVerifySessionAttestation,
+  signSessionAttestation,
+} from '@cofferdam/sdk'
+
+const token = await signSessionAttestation({
+  signer: new DeterministicPasskeySigner('test-user'),
+  fields: {
+    scope: 'my-app',
+    appPseudonym: 'cd_pseudo_test',
+    accountAddress: '0x1111111111111111111111111111111111111111',
+    chainId: 84532,
+    verified: false,
+    issuedAt: Date.now(),
+  },
+})
+
+const att = decodeAndVerifySessionAttestation(token, {
+  expect: { scope: 'my-app' },
+  maxAgeMs: 5 * 60_000,
+})
+// att.alg === 'p256'
+```
+
+The signer's key is predictable from its string, so it is for tests only.
+
+## Device-bound sessions
+
+Version 2 of the token adds an expiry, an audience and a device key: every request then carries a short proof signed by that key, in the shape of DPoP ([RFC 9449](https://www.rfc-editor.org/rfc/rfc9449)), so a copied token is useless without the device. The verifier is `decodeAndVerifySessionAttestationV2`, with `verifyPopProof` for the per-request proof. Pass your own `audience` when the token is signed and when it is verified; the default audience is Cofferdam's own API. Verify a token that carries your audience with the SDK: the HTTP route accepts version 2 tokens issued for Cofferdam's API only. The [SDK README](https://github.com/cofferdamxyz/cofferdam-sdk#device-bound-sessions-version-2) has the full example.
