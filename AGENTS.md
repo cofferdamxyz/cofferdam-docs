@@ -23,7 +23,7 @@ Cofferdam's public developer documentation (`content/docs/`) and the docs MCP se
 - No `account_id` in `wrangler.jsonc`, no secrets, no logs: a query is whatever an agent's user typed.
 - yarn 1 only, never npm. Pin every dependency to an exact version that has been published for at least seven days.
 - `cd mcp && yarn test` typechecks and runs the tests with Node's own runner (Node 22.18 or later, which strips the TypeScript types). `test/export.test.ts` runs against a real export of the website when `SITE_EXPORT` points at one, and is skipped otherwise.
-- Deploys are made by Cofferdam's maintainers. CI never deploys and holds no token.
+- Deploys are made by Cofferdam's maintainers. CI never deploys and holds no deploy token; the one token that can write (the pull request's result comment) is in a job that runs no code from the repository.
 
 ## Git
 
