@@ -24,10 +24,10 @@ jobs:
       install: ${{ steps.install.outcome }}
       test: ${{ steps.test.outcome }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -55,7 +55,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Report the result on the pull request
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           JOB: mcp
           JOB_RESULT: ${{ needs.mcp.result }}
